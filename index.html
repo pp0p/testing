@@ -4,72 +4,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telegram Mini App Security Test</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <h1>Telegram Mini App Security Test</h1>
-    <button onclick="sendMessageToTelegram()">📩 Test PostMessage Injection</button>
-    <button onclick="testOpenLink()">🖥️ Test XSS via openLink()</button>
-    <button onclick="testCSRF()">⚠️ Test CSRF Attack</button>
-    <button onclick="checkIframeBreakout()">🔓 Test Iframe Escape</button>
+    <h2>🚀 Telegram Mini App Security Testing</h2>
+
+    <button onclick="testCSRF()">Test CSRF</button>
+    <button onclick="testOpenRedirect()">Test Open Redirect</button>
+    <button onclick="testIframeEscape()">Test Iframe Escape</button>
+    <button onclick="testXSS()">Test XSS via openLink()</button>
 
     <script>
-        // 🚨 1. Listen for incoming messages from Telegram
-        window.addEventListener("message", function(event) {
-            console.log("📩 Received Message:", event.origin, event.data);
-
-            // 🛑 Origin Spoofing Detection
-            if (event.origin !== "https://web.telegram.org") {
-                alert("⚠️ Possible origin bypass detected! Unexpected origin: " + event.origin);
-            }
-
-            // 🚨 Check for Sensitive Data Exposure
-            if (typeof event.data === "string" && event.data.includes("token")) {
-                alert("🔴 Potential Sensitive Data Exposure: " + event.data);
-            }
-        });
-
-        // 🚀 2. Test PostMessage Injection
-        function sendMessageToTelegram() {
-            console.log("📩 Sending Message to Telegram...");
-            parent.postMessage("Test from Mini App", "*"); // * should be restricted!
-        }
-
-        // ⚡ 3. Test XSS via openLink()
-        function testOpenLink() {
-            if (window.Telegram && window.Telegram.WebApp) {
-                window.Telegram.WebApp.openLink("javascript:alert('XSS Detected!')");
-            } else {
-                alert("⚠️ Telegram WebApp API not found.");
-            }
-        }
-
-        // 🎭 4. Test CSRF Attack
+        // ✅ CSRF Test (Check if Telegram API blocks unauthorized requests)
         function testCSRF() {
-            let csrfPayload = {
-                method: "sendMessage",
-                chat_id: 123456789, // Change this to your Telegram User ID
-                text: "CSRF Test Message!"
-            };
-
             fetch("https://api.telegram.org/bot<TOKEN>/sendMessage", {
                 method: "POST",
-                body: JSON.stringify(csrfPayload),
-                headers: { "Content-Type": "application/json" }
-            }).then(response => response.json()).then(data => {
-                console.log("CSRF Response:", data);
-            }).catch(error => {
-                console.error("CSRF Attack Failed:", error);
-            });
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    chat_id: "<CHAT_ID>",
+                    text: "CSRF Test Message"
+                })
+            })
+            .then(response => response.text())
+            .then(data => console.log("✅ CSRF Test Result:", data))
+            .catch(error => console.error("❌ CSRF Attack Failed:", error));
         }
 
-        // 🔓 5. Attempt Iframe Escape
-        function checkIframeBreakout() {
+        // ✅ Open Redirect Test (Check if Telegram blocks phishing attempts)
+        function testOpenRedirect() {
+            Telegram.WebApp.openLink("https://evil.com");
+        }
+
+        // ✅ Iframe Escape Test (Check if we can break out of Telegram Web)
+        function testIframeEscape() {
             try {
-                top.location = "https://evil.com";  // Should be blocked
-                alert("⚠️ Iframe escape possible!");
+                top.location = "https://evil.com";
             } catch (error) {
-                alert("✅ Iframe escape is blocked (Safe).");
+                console.error("❌ Iframe Escape Failed:", error);
             }
+        }
+
+        // ✅ XSS via openLink() Test (Check if Telegram sanitizes input)
+        function testXSS() {
+            Telegram.WebApp.openLink("javascript:alert('XSS Detected!')");
+        }
+
+        // ✅ Log received messages for origin spoofing tests
+        window.addEventListener("message", (event) => {
+            console.log("📩 Received Message:", event.origin, event.data);
+        });
+
+        // ✅ Check for potential origin bypass
+        if (document.referrer !== "https://web.telegram.org") {
+            alert("❗Possible Origin Bypass Detected!");
         }
     </script>
 </body>
