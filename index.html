@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Mini App</title>
+    <script>
+        // Listen for messages from Telegram Web
+        window.addEventListener("message", function(event) {
+            console.log("Received Message:", event.origin, event.data);
+            
+            // Check if Telegram properly restricts message origins
+            if (event.origin !== "https://web.telegram.org") {
+                alert("Possible origin bypass!");
+            }
+
+            // Check if Telegram injects unsafe JavaScript
+            if (event.data && typeof event.data === "string" && event.data.includes("<script>")) {
+                alert("XSS Detected!");
+            }
+        });
+
+        // Send a message to the Telegram Web Parent Frame
+        function sendMessageToTelegram() {
+            parent.postMessage("Hello Telegram!", "*");
+        }
+
+        // Attempt to open a link using `web_app_open_link`
+        function testOpenLink() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.openLink("javascript:alert('XSS?');");
+            } else {
+                alert("Telegram WebApp API not found.");
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Test Telegram Mini App</h1>
+    <button onclick="sendMessageToTelegram()">Send Message to Telegram</button>
+    <button onclick="testOpenLink()">Test Open Link</button>
+</body>
+</html>
