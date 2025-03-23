@@ -11,10 +11,7 @@
     <button onclick="testOpenLink()">🖥️ Test XSS via openLink()</button>
     <button onclick="testCSRF()">⚠️ Test CSRF Attack</button>
     <button onclick="checkIframeBreakout()">🔓 Test Iframe Escape</button>
-    <button onclick="testOpenRedirectMethod1()">🔗 Test Open Redirect Method 1</button>
-    <button onclick="testOpenRedirectMethod2()">🔗 Test Open Redirect Method 2</button>
-    <button onclick="testOpenRedirectMethod3()">🔗 Test Open Redirect Method 3</button>
-    <button onclick="testOpenRedirectMethod4()">🔗 Test Open Redirect Method 4</button>
+    <button onclick="testOpenRedirect()">🔗 Test Open Redirect with Shortened URL</button>
 
     <script>
         // 🚨 1. Listen for incoming messages from Telegram
@@ -76,36 +73,10 @@
             }
         }
 
-        // 🚨 Test Open Redirect Method 1 (URL with query parameter)
-        function testOpenRedirectMethod1() {
-            let redirectUrl = "https://evil.com";  // Malicious URL
-            window.location.href = "https://example.com/redirect?url=" + encodeURIComponent(redirectUrl);
-        }
-
-        // 🚨 Test Open Redirect Method 2 (Using JavaScript window.location)
-        function testOpenRedirectMethod2() {
-            let redirectUrl = "https://evil.com";  // Malicious URL
-            window.location = redirectUrl;  // Direct redirection
-        }
-
-        // 🚨 Test Open Redirect Method 3 (Using anchor tag with href)
-        function testOpenRedirectMethod3() {
-            let redirectUrl = "https://evil.com";  // Malicious URL
-            let link = document.createElement("a");
-            link.href = redirectUrl;
-            link.target = "_blank";  // Open in new tab
-            document.body.appendChild(link);
-            link.click();  // Simulate a click on the link
-        }
-
-        // 🚨 Test Open Redirect Method 4 (Using form submission)
-        function testOpenRedirectMethod4() {
-            let redirectUrl = "https://evil.com";  // Malicious URL
-            let form = document.createElement("form");
-            form.method = "GET";
-            form.action = redirectUrl;
-            document.body.appendChild(form);
-            form.submit();  // Submit the form to redirect
+        // 🔗 6. Test Open Redirect with Shortened URL
+        function testOpenRedirect() {
+            const redirectUrl = "https://shorturl.at/B3Wwf";  // Shortened link
+            window.location.href = redirectUrl;  // This will trigger the redirect
         }
     </script>
 </body>
