@@ -7,7 +7,7 @@
 </head>
 <body>
     <h1>Telegram Mini App Security Test</h1>
-    <button onclick="sendMessageToTelegram()">📩 Test PostMessage Injection</button>
+    <button onclick="exploitWebApp()">📩 Test Message Injection via WebApp Override</button>
     <button onclick="testOpenLink()">🖥️ Test XSS via openLink()</button>
     <button onclick="testCSRF()">⚠️ Test CSRF Attack</button>
     <button onclick="checkIframeBreakout()">🔓 Test Iframe Escape</button>
@@ -29,10 +29,22 @@
             }
         });
 
-        // 🚀 2. Test PostMessage Injection
-        function sendMessageToTelegram() {
-            console.log("📩 Sending Message to Telegram...");
-            parent.postMessage("Test from Mini App", "*"); // * should be restricted!
+        // 🚀 2. Exploit WebApp Properties to Inject a Message
+        function exploitWebApp() {
+            console.log("📩 Attempting WebApp API override...");
+            if (window.Telegram && window.Telegram.WebApp) {
+                try {
+                    window.Telegram.WebApp.sendData = function() {
+                        return '{"event":"message","payload":{"chat_id":123456789,"text":"Injected Message via WebApp!"}}';
+                    };
+                    window.Telegram.WebApp.MainButton.setText("Exploit Triggered!").show();
+                    alert("✅ WebApp Exploit Executed! Check chat for injected message.");
+                } catch (e) {
+                    console.error("❌ Exploit failed:", e);
+                }
+            } else {
+                alert("⚠️ Telegram WebApp API not found.");
+            }
         }
 
         // ⚡ 3. Test XSS via openLink()
